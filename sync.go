@@ -27,7 +27,7 @@ func syncFiles() {
 	localFiles, _ := getLocalFiles()
 
 	for path, file := range localFiles {
-		fn := config.prefix + strings.TrimLeft(strings.TrimLeft(path, config.source), "/")
+		fn := config.prefix + strings.TrimLeft(strings.TrimSuffix(path, config.source), "/")
 		if remote, ok := remoteFiles[fn]; ok {
 			log.Printf("Remote file %s existing, calculating local etag %s.\n", fn, remote.ETag)
 		} else {
