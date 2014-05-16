@@ -21,7 +21,7 @@ func syncFiles() {
 	a = oss.Auth{config.accessId, config.accessKey}
 	o = &oss.OSS{a, config.endpoint, config.endpoint}
 
-	b = o.Bucket("apt-public")
+	b = o.Bucket(config.bucket)
 
 	remoteFiles, _ := getRemoteFiles()
 	localFiles, _ := getLocalFiles()

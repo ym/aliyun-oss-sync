@@ -79,6 +79,10 @@ func getOptions() {
 		log.Fatalln("Access key and access secret must be specified")
 	}
 
+	if config.bucket == "" {
+		log.Fatalln("Dest bucket must be specified")
+	}
+
 	if strings.HasPrefix(config.prefix, "/") {
 		config.prefix = strings.TrimLeft(config.prefix, "/")
 	}
