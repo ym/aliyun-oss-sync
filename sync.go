@@ -17,6 +17,10 @@ var (
 	err error
 )
 
+const (
+	DefaultContentType = "application/octet-stream"
+)
+
 func syncFiles() {
 	a = oss.Auth{config.accessId, config.accessKey}
 	o = &oss.OSS{a, config.endpoint, config.endpoint}
@@ -29,12 +33,24 @@ func syncFiles() {
 	for path, file := range localFiles {
 		fn := config.prefix + strings.TrimLeft(strings.TrimPrefix(path, config.source), "/")
 		if remote, ok := remoteFiles[fn]; ok {
-			log.Printf("Remote file %s existing, calculating local etag %s.\n", fn, remote.ETag)
+			if file.Mode().IsDir() == false {
+				data, err := getFile(path)
+				if err == nil {
+					hash := hashBytes(data)
+					if compareHash(hash, remote.ETag) == false {
+						log.Printf("Remote file %s existing, etag %s != %s.\n", fn, remote.ETag, hash)
+						putFile(path, fn, data)
+					}
+				}
+			}
 		} else {
 			if file.Mode().IsDir() == true {
 				putDirectory(fn)
 			} else {
-				putFile(path, fn)
+				data, err := getFile(path)
+				if err == nil {
+					putFile(path, fn, data)
+				}
 			}
 		}
 	}
@@ -50,15 +66,22 @@ func putDirectory(filename string) {
 	}
 }
 
-func putFile(path string, filename string) {
+func getFile(path string) ([]byte, error) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		log.Printf("Unable to read local file %s: %s.\n", path, err.Error())
 	}
+	return data, err
+}
+
+func putFile(path string, filename string, data []byte) {
+	// get content type
 	filetype := mime.TypeByExtension(filepath.Ext(path))
 	if filetype == "" {
-		filetype = "application/octet-stream"
+		log.Printf("Unable to detect content type of file %s, using %s.\n", filename, DefaultContentType)
+		filetype = DefaultContentType
 	}
+
 	err = b.Put(filename, data, filetype, oss.Private)
 	if err != nil {
 		log.Printf("Unable to upload file %s: %s.\n", filename, err.Error())
@@ -71,27 +94,34 @@ func getRemoteFiles() (files map[string]oss.ContentInfo, err error) {
 	var (
 		marker = ""
 		max    = 512
-		get    func() error
+		get    func(string) error
 	)
 
 	files = make(map[string]oss.ContentInfo)
 
-	get = func() error {
-		remoteFiles, err := b.List(config.prefix, "/", marker, max)
+	get = func(prefix string) error {
+		remoteFiles, err := b.List(prefix, "/", marker, max)
 		if err != nil {
 			return err
 		}
+
+		for _, p := range remoteFiles.CommonPrefixes {
+			marker = ""
+			get(p)
+		}
+
 		for _, file := range remoteFiles.Contents {
 			files[file.Key] = file
 		}
+
 		if remoteFiles.IsTruncated {
 			marker = remoteFiles.NextMarker
-			get()
+			get(prefix)
 		}
 		return nil
 	}
 
-	err = get()
+	err = get(config.prefix)
 	if err != nil {
 		return files, err
 	}

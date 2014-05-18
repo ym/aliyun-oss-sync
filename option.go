@@ -87,6 +87,10 @@ func getOptions() {
 		config.prefix = strings.TrimLeft(config.prefix, "/")
 	}
 
+	if strings.HasSuffix(config.prefix, "/") == false {
+		config.prefix += "/"
+	}
+
 	if strings.HasSuffix(config.source, "/") {
 		config.source = strings.TrimRight(config.source, "/")
 	}
