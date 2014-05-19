@@ -59,7 +59,7 @@ func syncFiles() {
 		for path, _ := range remoteFiles {
 			fn := strings.TrimLeft(strings.TrimPrefix(path, config.prefix), "/")
 			local := config.source + "/" + fn
-			remote := config.prefix + "/" + fn
+			remote := config.prefix + fn
 			if _, ok := localFiles[local]; ok == false {
 				log.Printf("Remove remote file %s.\n", remote)
 				b.Del(remote)
