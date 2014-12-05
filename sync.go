@@ -69,6 +69,9 @@ func syncFiles() {
 }
 
 func putDirectory(filename string) {
+	if filename == "" {
+		return
+	}
 	data := []byte("")
 	err := b.Put(filename, data, "text/plain", oss.Private)
 	if err != nil {
